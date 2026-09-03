@@ -1,4 +1,4 @@
-# exif-report
+# Exif Report
 
 A fast and human-readable EXIF metadata inspector for the terminal.
 
