@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: ./exif-report.sh <image-file>
-# Requires: exiftool, python3, coreutils (md5sum/sha256sum), awk
+# Requires: exiftool, python3, coreutils (md5sum/sha256sum/realpath/basename), awk
 
 set -euo pipefail
 
@@ -16,19 +16,25 @@ if [ ! -f "$FILE" ]; then
   exit 1
 fi
 
-if ! command -v exiftool &>/dev/null; then
-  echo "exiftool not found. Install: sudo apt install libimage-exiftool-perl"
+MISSING_DEPS=()
+for dep in exiftool python3 awk md5sum sha256sum realpath basename; do
+  if ! command -v "$dep" &>/dev/null; then
+    MISSING_DEPS+=("$dep")
+  fi
+done
+
+if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
+  echo "Error: Missing required dependencies: ${MISSING_DEPS[*]}"
+  echo "Please install them using your system package manager (see README.md)."
   exit 1
 fi
 
-# ANSI Colors and Styling
 BOLD="\033[1m"
 DIM="\033[2m"
 ITALIC="\033[3m"
 UNDERLINE="\033[4m"
 RESET="\033[0m"
 
-# Standard Colors
 RED="\033[31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -37,7 +43,6 @@ MAGENTA="\033[35m"
 CYAN="\033[36m"
 WHITE="\033[37m"
 
-# Bright Colors
 BRIGHT_RED="\033[91m"
 BRIGHT_GREEN="\033[92m"
 BRIGHT_YELLOW="\033[93m"
@@ -47,11 +52,10 @@ BRIGHT_CYAN="\033[96m"
 BRIGHT_WHITE="\033[97m"
 GRAY="\033[90m"
 
-get() { exiftool -s3 -"$1" "$FILE" 2>/dev/null || true; }
+get() { exiftool -s3 -"$1" -- "$FILE" 2>/dev/null || true; }
 
-# ---- Basic fields ----
-FILENAME=$(basename "$FILE")
-FULLPATH=$(realpath "$FILE" 2>/dev/null || echo "$FILE")
+FILENAME=$(basename -- "$FILE")
+FULLPATH=$(realpath -- "$FILE" 2>/dev/null || echo "$FILE")
 
 MAKE=$(get Make)
 MODEL=$(get Model)
@@ -83,10 +87,9 @@ MIMETYPE=$(get MIMEType)
 COLORSPACE=$(get ColorSpace)
 ICC=$(get ProfileDescription)
 
-MD5=$(md5sum "$FILE" | awk '{print $1}')
-SHA256=$(sha256sum "$FILE" | awk '{print $1}')
+MD5=$(md5sum -- "$FILE" | awk '{print $1}')
+SHA256=$(sha256sum -- "$FILE" | awk '{print $1}')
 
-# ---- Megapixels / aspect ratio ----
 MP=""
 ASPECT=""
 if [ -n "$WIDTH" ] && [ -n "$HEIGHT" ]; then
@@ -107,7 +110,6 @@ except Exception:
   fi
 fi
 
-# ---- "time ago" calculation ----
 TIME_AGO=""
 if [ -n "$DATE_RAW" ]; then
   EPOCH_THEN=$(date -d "$(echo "$DATE_RAW" | sed 's/^\([0-9]*\):\([0-9]*\):\([0-9]*\)/\1-\2-\3/')" +%s 2>/dev/null || true)
@@ -141,11 +143,6 @@ if [ -n "$DATE_RAW" ]; then
   fi
 fi
 
-# ---- Thumbnail check ----
-THUMB_BYTES=$(exiftool -ThumbnailImage -b "$FILE" 2>/dev/null | wc -c || echo 0)
-THUMB_BYTES=$(echo "$THUMB_BYTES" | tr -d '[:space:]')
-
-# ---- Helper formatting ----
 field() {
   local label="$1"
   local value="$2"
@@ -163,7 +160,6 @@ section_header() {
   printf "\n${BOLD}${BRIGHT_CYAN}── %s ──${RESET}\n" "$title"
 }
 
-# ---- Print Report ----
 echo
 echo -e "${BOLD}${BRIGHT_BLUE}╔══════════════════════════════════════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}${BRIGHT_BLUE}║${RESET}                            ${BOLD}${BRIGHT_WHITE}EXIF METADATA REPORT${RESET}                              ${BOLD}${BRIGHT_BLUE}║${RESET}"
@@ -271,23 +267,13 @@ else
   field_dim "ICC Profile" "None"
 fi
 
-section_header "EMBEDDED THUMBNAIL"
-if [ -n "$THUMB_BYTES" ] && [ "$THUMB_BYTES" -gt 0 ] 2>/dev/null; then
-  printf "  ${CYAN}%-16s${RESET} : ${BRIGHT_YELLOW}Embedded (%s bytes)${RESET} - ${BRIGHT_RED}[WARNING: may retain original metadata]${RESET}\n" "Thumbnail" "$THUMB_BYTES"
-else
-  printf "  ${CYAN}%-16s${RESET} : ${DIM}%s${RESET}\n" "Thumbnail" "None embedded"
-fi
-
 echo
 echo -e "${BOLD}${BRIGHT_BLUE}╔══════════════════════════════════════════════════════════════════════════════╗${RESET}"
 echo -e "${BOLD}${BRIGHT_BLUE}║${RESET}                   ${BOLD}${BRIGHT_WHITE}FULL RAW METADATA (BY CATEGORY)${RESET}                            ${BOLD}${BRIGHT_BLUE}║${RESET}"
 echo -e "${BOLD}${BRIGHT_BLUE}╚══════════════════════════════════════════════════════════════════════════════╝${RESET}"
 echo
 
-# -a : allow duplicate tags   -u : show unknown tags too
-# -g1 : group by category     -e : extract embedded/extra tags
-# -api RequestAll=3 : force every derived/composite tag to compute
-exiftool -a -u -g1 -e -api RequestAll=3 "$FILE" | awk \
+exiftool -a -u -g1 -e -api RequestAll=3 -- "$FILE" | awk \
   -v BOLD="$BOLD" -v DIM="$DIM" -v RESET="$RESET" \
   -v HEADER_COLOR="$BOLD$BRIGHT_CYAN" \
   -v KEY_COLOR="$CYAN" \

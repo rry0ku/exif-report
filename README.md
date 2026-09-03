@@ -6,11 +6,10 @@ A fast and human-readable EXIF metadata inspector for the terminal.
 
 ## Features
 
-- Clean summary sections for File Information, Camera and Hardware, Exposure and Settings, Date and Timestamp, Geolocation, Color Profiles, and Embedded Thumbnails.
+- Clean summary sections for File Information, Camera and Hardware, Exposure and Settings, Date and Timestamp, Geolocation, and Color Profiles.
 - Formatted photography settings (shutter speed, aperture, ISO, exposure mode).
 - Human-readable relative time calculations (e.g. 2 years, 3 months ago).
 - Geolocation mapping links (Google Maps, OpenStreetMap, Bing Maps, Wikimapia, and Google Street View).
-- Embedded thumbnail detection and security warning.
 - Colour-coded raw metadata output grouped by ExifTool tag category.
 
 ## Requirements and Installation
