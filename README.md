@@ -1,6 +1,6 @@
 # exif-report
 
-A fast, colourful, and human-readable EXIF metadata inspector for the terminal.
+A fast and human-readable EXIF metadata inspector for the terminal.
 
 `exif-report` parses image metadata using `exiftool`, extracts critical camera, exposure, location, and file details into formatted sections, and provides a colour-coded view of all raw metadata tags.
 
@@ -115,7 +115,3 @@ exif-report.sh <image-file>
 ```
 
 Supported formats include JPEG, PNG, TIFF, WebP, HEIC, RAW formats (CR2, NEF, ARW, DNG), and any media format supported by ExifTool.
-
-## License
-
-MIT License. Feel free to modify and distribute.
